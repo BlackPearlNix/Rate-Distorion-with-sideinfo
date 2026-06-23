@@ -5,11 +5,11 @@ from scipy.optimize import minimize
 # functions
 # *******************
 
-p0 = 0.3  # crossover probability of Y
-D_target_single = 0.225  # targeted distortion constraint for the single printout
+p0 = 0.25  # crossover probability of Y
+D_target_single = 0.13 # targeted distortion constraint for the single printout
 
 def H_TSC(q):               # Ternary entropy function
-    # Clip to avoid log(0). Max crossover for ternary is 2/3 (independent)
+    # Clip to avoid log(0). Max crossover for ternary is 2/3
     q = np.clip(q, 1e-10, 2/3 - 1e-10) 
     term1 = -(1 - q) * np.log2(1 - q)
     term2 = -q * np.log2(q / 2)
@@ -26,36 +26,32 @@ def D_dec(q, p0):           # Optimal decoder distortion
     return np.minimum(q, p0)
 
 
-# Parametric Solution Solver
+# Parametric Solver (finding 4 -alphas(time sharing prob) and 4- distortions, one for each TSC)
 # **********************
 
 def solve_parametric(D_target, p0):
-    """
-    Solves the parametric optimization for a given target distortion.
-    Variables: vars = [q_a, q_b, q_c, alpha_a, alpha_b, alpha_c]
-    """
     if D_target >= p0:
-        return 0.0, [p0, p0, p0], [1.0, 0.0, 0.0]
+        return 0.0, [p0, p0, p0, p0], [1.0, 0.0, 0.0, 0.0]
 
     def objective(vars):
-        q = vars[0:3]
-        alpha = vars[3:6]
+        q = vars[0:4]
+        alpha = vars[4:8]
         return np.sum(alpha * R_wz_ternary(q, p0))
 
     def constraint_distortion(vars):
-        q = vars[0:3]
-        alpha = vars[3:6]
+        q = vars[0:4]
+        alpha = vars[4:8]
         return D_target - np.sum(alpha * D_dec(q, p0))
 
     def constraint_probability(vars):
-        alpha = vars[3:6]
+        alpha = vars[4:8]
         return np.sum(alpha) - 1.0
 
     # Initial guess: Spread q across domain, including the zero-rate point (q=2/3)
-    x0 = [0.01, D_target, 2/3, 0.33, 0.33, 0.34]
+    x0 = [0.01, D_target, 2/3,0.01,0.33, 0.33, 0.33, 0.34]
 
     # Bounds: q in [0, 2/3] for ternary, alpha in [0, 1]
-    bounds = [(0, 2/3), (0, 2/3), (0, 2/3), (0, 1), (0, 1), (0, 1)]
+    bounds = [(0, 2/3), (0, 2/3), (0, 2/3), (0, 2/3), (0, 1), (0, 1), (0, 1), (0, 1)]
 
     constraints = [
         {'type': 'ineq', 'fun': constraint_distortion},
@@ -63,10 +59,10 @@ def solve_parametric(D_target, p0):
     ]
 
     result = minimize(objective, x0, bounds=bounds, constraints=constraints, method='SLSQP')
-    return result.fun, result.x[0:3], result.x[3:6]
+    return result.fun, result.x[0:4], result.x[4:8]
 
 
-# Generate Rate-Distortion Curve
+# generating Rate-Distortion curve
 # **********************
 
 D_vals = np.linspace(0.001, p0, 50)
@@ -76,11 +72,11 @@ for D in D_vals:
     rate, _, _ = solve_parametric(D, p0)
     R_vals_parametric.append(rate)
 
-
-# Output for Single Target Distortion
-# *********************
-
+#Rate for given distortion
 rate_at_D, opt_q, opt_alpha = solve_parametric(D_target_single, p0)
+
+# Outputs
+# *********************
 
 print(f"System Parameters")
 print(f"Source X ~ Uniform(0, 1, 2)")
@@ -91,7 +87,7 @@ print(f" Results ")
 print(f"Parametric Rate: {rate_at_D:.6f} bits/symbol\n")
 
 print(f"Optimal Parametric Variables")
-for i, name in enumerate(['a', 'b', 'c']):
+for i, name in enumerate(['a', 'b', 'c' , 'd']):
     if opt_alpha[i] > 1e-4:
         eff_D = D_dec(opt_q[i], p0)
         print(f"TSC {name}: q_{name} = {opt_q[i]:.4f}, alpha_{name} = {opt_alpha[i]:.4f}, Distortion = {eff_D:.4f}, Rate = {R_wz_ternary(opt_q[i], p0):.4f}")
@@ -100,7 +96,7 @@ for i, name in enumerate(['a', 'b', 'c']):
 # Plotting
 # ********************
 
-# Generate the single-letter curve (without time-sharing) for comparison
+# Generate the single-letter curve (without time-sharing)
 q_single = np.linspace(0, p0, 100)
 R_single = R_wz_ternary(q_single, p0)
 
