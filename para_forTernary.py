@@ -96,13 +96,13 @@ for i, name in enumerate(['a', 'b', 'c' , 'd']):
 # Plotting
 # ********************
 
-# Generate the single-letter curve (without time-sharing)
+# Generate the R(D) curve (without time-sharing)
 q_single = np.linspace(0, p0, 100)
 R_single = R_wz_ternary(q_single, p0)
 
 plt.figure(figsize=(9, 6))
 
-# Plot single-letter R(D) curve (without time-sharing)
+# Plot R(D) curve (without time-sharing)
 plt.plot(q_single, R_single, 'k--', linewidth=1.5, label='Single TSC $H_{TSC}(p_0 * q) - H_{TSC}(q)$')
 
 # Plot parametric convex envelope (with time-sharing)
