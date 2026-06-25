@@ -6,8 +6,8 @@ from scipy.optimize import minimize
 # functions
 # *******************
 
-p0 = 0.3  #crossover probability of Y
-D_target = 0.225  # targeted distortion constraint
+p0 = 0.15  #crossover probability of Y
+D_target = 0.05  # targeted distortion constraint
 
 def H(x):			        #binary entropy fnction
     x = np.clip(x, 1e-10, 1 - 1e-10) #avoid log(0)
